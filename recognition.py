@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import random
 from moments import Part
 
 # RGB
@@ -7,6 +8,12 @@ from moments import Part
 # BLUE_MAX = [110, 50, 70]
 # RED_MIN = [0, 30, 130]
 # RED_MAX = [40, 95, 220]
+
+# fedex 1
+# BLUE_MIN = [125, 122, 75]
+# BLUE_MAX = [135, 230, 128]
+# RED_MIN = [10, 170, 115]
+# RED_MAX = [18, 243, 180]
 
 # HSV fedex 2
 # BLUE_MIN = [110, 122, 76]
@@ -16,7 +23,7 @@ from moments import Part
 
 # HSV fedex 3
 # PUR_MIN = [138, 163, 71]
-# PUR_MAX = [140, 299, 84]
+# PUR_MAX = [140, 230, 84]
 # RED_MIN = [4, 242, 191]
 # RED_MAX = [6, 255, 217]
 
@@ -27,7 +34,7 @@ from moments import Part
 # RED_MAX = [7, 200, 255]
 
 BLUE_MIN = [110, 122, 71]
-BLUE_MAX = [144, 299, 105]
+BLUE_MAX = [144, 230, 105]
 RED_MIN = [0, 200, 191]
 RED_MAX = [6, 255, 230]
 
@@ -36,8 +43,10 @@ RED_MAX = [6, 255, 230]
 class Recognizer:
     """Image recognition handler."""
 
-    def __init__(self, image):
+    def __init__(self, image, filename):
         self.image = np.copy(image)
+        self.filename = filename
+
         self.fuzzy_image = None
         self.hsv_image = None
         self.thresh_image = None
@@ -66,6 +75,7 @@ class Recognizer:
 
         self.thresholding()
         cv2.imwrite("tresholding.jpg", self.thresh_image)
+        cv2.imshow('FedEx', self.thresh_image)
 
         self.segmentation()
         cv2.imwrite("segmen.jpg", self.segmen_image)
@@ -74,6 +84,7 @@ class Recognizer:
         self.recognition()
 
         cv2.imshow('FedEx', self.image)
+        cv2.imwrite("results/" + self.filename, self.image)
 
     def thresholding(self):
         """Create black-white image."""
@@ -100,8 +111,9 @@ class Recognizer:
 
                     self.flood_fill((row, col), color)
                     i += 1
-
+        self.remove_small_parts()
         print(len(self.parts))
+
         #     # Invert floodfilled image
         # im_floodfill_inv = cv2.bitwise_not(image)
         #
@@ -115,6 +127,7 @@ class Recognizer:
             part.count_moments()
             print("Color, NM1, NM2, NM7")
             print(part.color, part.NM1, part.NM2, part.NM7)
+            print(len(part.word_index))
 
     def recognition(self):
         """Perform recognition."""
@@ -126,16 +139,12 @@ class Recognizer:
         end_line = 0
 
         Fed_line = {
-            "min_rows": [],
-            "min_cols": [],
-            "max_rows": [],
-            "max_cols": []
+            "min": [],
+            "max": [],
         }
         x_line = {
-            "min_rows": [],
-            "min_cols": [],
-            "max_rows": [],
-            "max_cols": []
+            "min": [],
+            "max": [],
         }
 
         for part in self.parts:
@@ -164,10 +173,8 @@ class Recognizer:
                     col_max = np.copy(pixel[1])
                 if pixel[1] < col_min:
                     col_min = np.copy(pixel[1])
-            Fed_line["min_rows"].append(row_min)
-            Fed_line["min_cols"].append(col_min)
-            Fed_line["max_rows"].append(row_max)
-            Fed_line["max_cols"].append(col_max)
+            Fed_line["min"].append((row_min, col_min))
+            Fed_line["max"].append((row_max, col_max))
 
         for part in x:
             row_min = np.copy(self.rows)
@@ -182,17 +189,21 @@ class Recognizer:
                     col_max = np.copy(pixel[1])
                 if pixel[1] < col_min:
                     col_min = np.copy(pixel[1])
-            x_line["min_rows"].append(row_min)
-            x_line["min_cols"].append(col_min)
-            x_line["max_rows"].append(row_max)
-            x_line["max_cols"].append(col_max)
+            x_line["min"].append((row_min, col_min))
+            x_line["max"].append((row_max, col_max))
 
-        # for i, value in enumerate(Fed_line["min_rows"]):
-        #     start_line =
-        start_line = (Fed_line["min_cols"][0], Fed_line["min_rows"][0])
-        end_line = (x_line["max_cols"][0], x_line["max_rows"][0])
-        cv2.rectangle(self.image, start_line, end_line, (0, 100, 0), 1)
+        for i, value in enumerate(Fed_line["min"]):
+            row_min = x_line["min"][i][0] if (Fed_line["min"][i][0] > x_line["min"][i][0]) else Fed_line["min"][i][0]
+            row_max = Fed_line["max"][i][0] if (Fed_line["max"][i][0] > x_line["max"][i][0]) else x_line["max"][i][0]
+            col_min = Fed_line["min"][i][1]
+            col_max = x_line["max"][i][1]
+            start_line = (col_min, row_min)
+            end_line = (col_max, row_max)
 
+            print(start_line)
+            print(end_line)
+
+            cv2.rectangle(self.image, start_line, end_line, (0, 100, 0), 1)
 
     def flood_fill(self, position, part_color):
         """Divide image into separate parts."""
@@ -280,6 +291,20 @@ class Recognizer:
                     return True
         return False
 
+    def remove_small_parts(self):
+        """Remove parts with area less than 10px."""
+        to_remove = []
+        for index, part in enumerate(self.parts):
+            if len(part.word_index) < 30:
+                for pixel in part.word_index:
+                    self.segmen_image[pixel[0], pixel[1], 0] = 0
+                    self.segmen_image[pixel[0], pixel[1], 1] = 0
+                    self.segmen_image[pixel[0], pixel[1], 2] = 0
+                self.parts.remove(part)
+
+        # for index in to_remove:
+        #     print(index)
+        #     self.parts.pop(index)
 
     def get_color(self, i):
         """Get color for part."""
@@ -287,15 +312,14 @@ class Recognizer:
             [255, 0, 0],
             [0, 255, 0],
             [0, 0, 255],
-            [100, 0, 0],
-            [0, 100, 0],
-            [0, 0, 100],
-            [100, 100, 100],
-            [50, 0, 0],
-            [0, 50, 0],
-            [0, 0, 50],
-            [50, 50, 50]
         ]
+
+        for n in range(500):
+            b = random.randint(0, 255)
+            g = random.randint(0, 255)
+            r = random.randint(0, 255)
+            color.append([b, g, r])
+
         return color[i]
 
     def is_Fed(self, part):

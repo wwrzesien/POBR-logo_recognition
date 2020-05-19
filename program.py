@@ -28,7 +28,7 @@ def main() -> int:
     if filename == 'fedex_1.jpg':
         image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
 
-    logo_recog = Recognizer(image)
+    logo_recog = Recognizer(image, filename)
     logo_recog.recognize()
 
     # Shwo image in the window
