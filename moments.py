@@ -33,6 +33,7 @@ class Part:
 
         self.NM1 = 0
         self.NM2 = 0
+        self.NM4 = 0
         self.NM7 = 0
 
 
@@ -71,4 +72,5 @@ class Part:
 
         self.NM1 = (self.M20 + self.M02) / (self.m00**2)
         self.NM2 = ((self.M20 - self.M02)**2 + 4 * self.M11**2) / (self.m00**4)
+        self.NM4 = ((self.M30 + self.M12)**2 + (self.M21 + self.M03)**2) / self.m00**5
         self.NM7 = (self.M20 * self.M02 - self.M11**2) / (self.m00**4)

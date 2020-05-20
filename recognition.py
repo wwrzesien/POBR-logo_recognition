@@ -22,8 +22,8 @@ from moments import Part
 # RED_MAX = [2, 230, 230]
 
 # HSV fedex 3
-# PUR_MIN = [138, 163, 71]
-# PUR_MAX = [140, 230, 84]
+# BLUE_MIN = [138, 163, 66]
+# BLUE_MAX = [140, 255, 84]
 # RED_MIN = [4, 242, 191]
 # RED_MAX = [6, 255, 217]
 
@@ -34,16 +34,24 @@ from moments import Part
 # RED_MAX = [7, 200, 255]
 
 # fedex 2 i 3
-BLUE_MIN = [110, 122, 71]
-BLUE_MAX = [144, 230, 105]
-RED_MIN = [0, 200, 191]
-RED_MAX = [6, 255, 230]
+# BLUE_MIN = [110, 122, 71]
+# BLUE_MAX = [144, 230, 105]
+# RED_MIN = [0, 200, 191]
+# RED_MAX = [6, 255, 230]
 
-#fedex 2 3 4
-BLUE_MIN = [110, 38, 71]
-BLUE_MAX = [145, 230, 160]
+# fedex 2 3 4 -> dziala
+# BLUE_MIN = [110, 38, 71]
+# BLUE_MAX = [145, 230, 160]
+# RED_MIN = [0, 125, 153]
+# RED_MAX = [7, 255, 255]
+
+# fedex 1 2 3 4
+BLUE_MIN = [110, 38, 66]
+BLUE_MAX = [145, 255, 160]
 RED_MIN = [0, 125, 153]
 RED_MAX = [7, 255, 255]
+ORANGE_MIN = [10, 170, 115]
+ORANGE_MAX = [18, 243, 180]
 
 
 class Recognizer:
@@ -75,16 +83,16 @@ class Recognizer:
 
         self.fuzzy_image = self.convolution(conv)
         cv2.imwrite("conv.jpg", self.fuzzy_image)
-
+        # self.fuzzy_image = np.copy(self.image)
         # # Convert BGR to HSV
         self.hsv_image = cv2.cvtColor(self.fuzzy_image, cv2.COLOR_BGR2HSV)
 
         self.thresholding()
-        cv2.imwrite("tresholding.jpg", self.thresh_image)
+        cv2.imwrite("results/thresholding/" + self.filename, self.thresh_image)
         cv2.imshow('FedEx', self.thresh_image)
 
         self.segmentation()
-        cv2.imwrite("segmen.jpg", self.segmen_image)
+        cv2.imwrite("results/segmentation/" + self.filename, self.segmen_image)
 
         self.calculate_moments()
         self.recognition()
@@ -98,7 +106,7 @@ class Recognizer:
 
         for row in range(self.rows):
             for col in range(self.cols):
-                if (self.detect_blue(self.hsv_image[row, col])) or (self.detect_red(self.hsv_image[row, col])):
+                if (self.detect_blue(self.hsv_image[row, col])) or (self.detect_red(self.hsv_image[row, col]) or (self.detect_orange(self.hsv_image[row, col]))):
                     self.thresh_image[row, col] = [255, 255, 255]
                 else:
                     self.thresh_image[row, col] = [0, 0, 0]
@@ -131,8 +139,8 @@ class Recognizer:
         """Calculate moments for parts."""
         for part in self.parts:
             part.count_moments()
-            print("Color, NM1, NM2, NM7")
-            print(part.color, part.NM1, part.NM2, part.NM7)
+            print("Color, NM1, NM2, NM4, NM7")
+            print(part.color, part.NM1, part.NM2, part.NM4, part.NM7)
             print(len(part.word_index))
 
     def recognition(self):
@@ -198,8 +206,19 @@ class Recognizer:
             x_line["min"].append((row_min, col_min))
             x_line["max"].append((row_max, col_max))
 
+        for fed in Fed:
+            print(fed.color)
+        print("")
+        for e in E:
+            print(e.color)
+        print("")
+        for i in x:
+            print(i.color)
+
         for i, value in enumerate(Fed_line["min"]):
             print(len(Fed_line["min"]))
+            print(len(x_line["min"]))
+            print()
             row_min = x_line["min"][i][0] if (Fed_line["min"][i][0] > x_line["min"][i][0]) else Fed_line["min"][i][0]
             row_max = Fed_line["max"][i][0] if (Fed_line["max"][i][0] > x_line["max"][i][0]) else x_line["max"][i][0]
             col_min = Fed_line["min"][i][1]
@@ -298,6 +317,14 @@ class Recognizer:
                     return True
         return False
 
+    def detect_orange(self, pixel):
+        """Detect orange color."""
+        if (pixel[0] >= ORANGE_MIN[0] and pixel[0] <= ORANGE_MAX[0]):
+            if (pixel[1] >= ORANGE_MIN[1] and pixel[1] <= ORANGE_MAX[1]):
+                if (pixel[2] >= ORANGE_MIN[2] and pixel[2] <= ORANGE_MAX[2]):
+                    return True
+        return False
+
     def remove_small_parts(self):
         """Remove parts with area less than 10px."""
         to_remove = []
@@ -307,11 +334,9 @@ class Recognizer:
                     self.segmen_image[pixel[0], pixel[1], 0] = 0
                     self.segmen_image[pixel[0], pixel[1], 1] = 0
                     self.segmen_image[pixel[0], pixel[1], 2] = 0
-                # self.parts.remove(part)
                 to_remove.append(part)
 
         for part in to_remove:
-            # print(index)
             self.parts.remove(part)
 
     def get_color(self, i):
@@ -322,7 +347,7 @@ class Recognizer:
             [0, 0, 255],
         ]
 
-        for n in range(500):
+        for n in range(1000):
             b = random.randint(0, 255)
             g = random.randint(0, 255)
             r = random.randint(0, 255)
@@ -332,24 +357,27 @@ class Recognizer:
 
     def is_Fed(self, part):
         """Check whether part is Fed element."""
-        if part.NM1 >= 0.38 and part.NM1 <= 0.551:
-            if part.NM2 >= 0.07 and part.NM2 <= 0.176:
-                if part.NM7 >= 0.019 and part.NM7 <= 0.315:
-                    return True
+        if part.NM1 >= 0.30 and part.NM1 <= 0.45:
+            if part.NM2 >= 0.015 and part.NM2 <= 0.095:
+                if part.NM7 >= 0.018 and part.NM7 <= 0.265:
+                    if part.NM4 >= 0.00028 and part.NM4 <= 0.00099:
+                        return True
         return False
 
     def is_E(self, part):
         """Check whether part is E element."""
-        if part.NM1 >= 0.28 and part.NM1 <= 0.39:
-            if part.NM2 >= 0.033 and part.NM2 <= 0.082:
-                if part.NM7 >= 0.012 and part.NM7 <= 0.016:
-                    return True
+        if part.NM1 >= 0.28 and part.NM1 <= 0.81:
+            if part.NM2 >= 0.028 and part.NM2 <= 0.6:
+                if part.NM7 >= 0.012 and part.NM7 <= 0.023:
+                    if part.NM4 >= 0.000022 and part.NM4 <= 0.0011:
+                        return True
         return False
 
     def is_x(self, part):
         """Check whether part is x element."""
-        if part.NM1 >= 0.23 and part.NM1 <= 0.255:
-            if part.NM2 >= 0.000034 and part.NM2 <= 0.00385:
-                if part.NM7 >= 0.012 and part.NM7 <= 0.016:
-                    return True
+        if part.NM1 >= 0.23 and part.NM1 <= 0.48:
+            if part.NM2 >= 0.000034 and part.NM2 <= 0.162:
+                if part.NM7 >= 0.012 and part.NM7 <= 0.021:
+                    if part.NM4 >= 0.00000001 and part.NM4 <= 0.000055:
+                        return True
         return False

@@ -15,11 +15,10 @@ PATH = './images/'
 def main() -> int:
     """Główna funkcja."""
 
-    filename = 'fedex_1.jpg'
+    # filename = 'fedex_1.jpg'
     # filename = 'fedex_2.jpg'
     # filename = 'fedex_3.jpg'
-    # filename = 'fedex_4.jpg'
-    # filename = 'tresholding.jpg'
+    filename = 'fedex_4.jpg'
 
     # Read images
     image = cv2.imread(PATH + filename, 1)
@@ -30,9 +29,6 @@ def main() -> int:
 
     logo_recog = Recognizer(image, filename)
     logo_recog.recognize()
-
-    # Shwo image in the window
-    # cv2.imshow('FedEx', image)
 
     cv2.waitKey(0)
     cv2.destroyWindow('FedEx')
