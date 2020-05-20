@@ -33,11 +33,17 @@ from moments import Part
 # RED_MIN = [0, 125, 153]
 # RED_MAX = [7, 200, 255]
 
+# fedex 2 i 3
 BLUE_MIN = [110, 122, 71]
 BLUE_MAX = [144, 230, 105]
 RED_MIN = [0, 200, 191]
 RED_MAX = [6, 255, 230]
 
+#fedex 2 3 4
+BLUE_MIN = [110, 38, 71]
+BLUE_MAX = [145, 230, 160]
+RED_MIN = [0, 125, 153]
+RED_MAX = [7, 255, 255]
 
 
 class Recognizer:
@@ -193,6 +199,7 @@ class Recognizer:
             x_line["max"].append((row_max, col_max))
 
         for i, value in enumerate(Fed_line["min"]):
+            print(len(Fed_line["min"]))
             row_min = x_line["min"][i][0] if (Fed_line["min"][i][0] > x_line["min"][i][0]) else Fed_line["min"][i][0]
             row_max = Fed_line["max"][i][0] if (Fed_line["max"][i][0] > x_line["max"][i][0]) else x_line["max"][i][0]
             col_min = Fed_line["min"][i][1]
@@ -295,16 +302,17 @@ class Recognizer:
         """Remove parts with area less than 10px."""
         to_remove = []
         for index, part in enumerate(self.parts):
-            if len(part.word_index) < 30:
+            if len(part.word_index) < 90:
                 for pixel in part.word_index:
                     self.segmen_image[pixel[0], pixel[1], 0] = 0
                     self.segmen_image[pixel[0], pixel[1], 1] = 0
                     self.segmen_image[pixel[0], pixel[1], 2] = 0
-                self.parts.remove(part)
+                # self.parts.remove(part)
+                to_remove.append(part)
 
-        # for index in to_remove:
-        #     print(index)
-        #     self.parts.pop(index)
+        for part in to_remove:
+            # print(index)
+            self.parts.remove(part)
 
     def get_color(self, i):
         """Get color for part."""
@@ -324,24 +332,24 @@ class Recognizer:
 
     def is_Fed(self, part):
         """Check whether part is Fed element."""
-        if part.NM1 >= 0.4 and part.NM1 <= 0.5:
-            if part.NM2 >= 0.09 and part.NM2 <= 0.11:
-                if part.NM7 >= 0.02 and part.NM7 <= 0.27:
+        if part.NM1 >= 0.38 and part.NM1 <= 0.551:
+            if part.NM2 >= 0.07 and part.NM2 <= 0.176:
+                if part.NM7 >= 0.019 and part.NM7 <= 0.315:
                     return True
         return False
 
     def is_E(self, part):
         """Check whether part is E element."""
-        if part.NM1 >= 0.28 and part.NM1 <= 0.31:
-            if part.NM2 >= 0.033 and part.NM2 <= 0.038:
+        if part.NM1 >= 0.28 and part.NM1 <= 0.39:
+            if part.NM2 >= 0.033 and part.NM2 <= 0.082:
                 if part.NM7 >= 0.012 and part.NM7 <= 0.016:
                     return True
         return False
 
     def is_x(self, part):
         """Check whether part is x element."""
-        if part.NM1 >= 0.24 and part.NM1 <= 0.25:
-            if part.NM2 >= 0.00008 and part.NM2 <= 0.00016:
-                if part.NM7 >= 0.014 and part.NM7 <= 0.016:
+        if part.NM1 >= 0.23 and part.NM1 <= 0.255:
+            if part.NM2 >= 0.000034 and part.NM2 <= 0.00385:
+                if part.NM7 >= 0.012 and part.NM7 <= 0.016:
                     return True
         return False

@@ -15,8 +15,8 @@ PATH = './images/'
 def main() -> int:
     """Główna funkcja."""
 
-    # filename = 'fedex_1.jpg'
-    filename = 'fedex_2.jpg'
+    filename = 'fedex_1.jpg'
+    # filename = 'fedex_2.jpg'
     # filename = 'fedex_3.jpg'
     # filename = 'fedex_4.jpg'
     # filename = 'tresholding.jpg'
