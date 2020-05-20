@@ -3,49 +3,6 @@ import cv2
 import random
 from moments import Part
 
-# RGB
-# BLUE_MIN = [60, 10, 50]
-# BLUE_MAX = [110, 50, 70]
-# RED_MIN = [0, 30, 130]
-# RED_MAX = [40, 95, 220]
-
-# fedex 1
-# BLUE_MIN = [125, 122, 75]
-# BLUE_MAX = [135, 230, 128]
-# RED_MIN = [10, 170, 115]
-# RED_MAX = [18, 243, 180]
-
-# HSV fedex 2
-# BLUE_MIN = [110, 122, 76]
-# BLUE_MAX = [135, 150, 105]
-# RED_MIN = [0, 200, 200]
-# RED_MAX = [2, 230, 230]
-
-# HSV fedex 3
-# BLUE_MIN = [138, 163, 66]
-# BLUE_MAX = [140, 255, 84]
-# RED_MIN = [4, 242, 191]
-# RED_MAX = [6, 255, 217]
-
-# fedex 4
-# BLUE_MIN = [115, 38, 76]
-# BLUE_MAX = [145, 102, 160]
-# RED_MIN = [0, 125, 153]
-# RED_MAX = [7, 200, 255]
-
-# fedex 2 i 3
-# BLUE_MIN = [110, 122, 71]
-# BLUE_MAX = [144, 230, 105]
-# RED_MIN = [0, 200, 191]
-# RED_MAX = [6, 255, 230]
-
-# fedex 2 3 4 -> dziala
-# BLUE_MIN = [110, 38, 71]
-# BLUE_MAX = [145, 230, 160]
-# RED_MIN = [0, 125, 153]
-# RED_MAX = [7, 255, 255]
-
-# fedex 1 2 3 4
 BLUE_MIN = [110, 38, 66]
 BLUE_MAX = [145, 255, 160]
 RED_MIN = [0, 125, 153]
@@ -53,10 +10,11 @@ RED_MAX = [7, 255, 255]
 ORANGE_MIN = [10, 170, 115]
 ORANGE_MAX = [18, 243, 180]
 
+# in image: row -> y, col -> x
+
 
 class Recognizer:
     """Image recognition handler."""
-
     def __init__(self, image, filename):
         self.image = np.copy(image)
         self.filename = filename
@@ -74,22 +32,21 @@ class Recognizer:
     def recognize(self):
         """Perform image recognition."""
         norm = 10
-        # Filtr usredniajacy
+        # Lowpass filtering
         conv = [
                 [1/norm, 1/norm, 1/norm],
                 [1/norm, 2/norm, 1/norm],
                 [1/norm, 1/norm, 1/norm]
             ]
 
-        self.fuzzy_image = self.convolution(conv)
-        cv2.imwrite("conv.jpg", self.fuzzy_image)
-        # self.fuzzy_image = np.copy(self.image)
+        self.convolution(conv)
+        cv2.imwrite("results/convolution/" + self.filename, self.fuzzy_image)
+
         # # Convert BGR to HSV
         self.hsv_image = cv2.cvtColor(self.fuzzy_image, cv2.COLOR_BGR2HSV)
 
         self.thresholding()
         cv2.imwrite("results/thresholding/" + self.filename, self.thresh_image)
-        cv2.imshow('FedEx', self.thresh_image)
 
         self.segmentation()
         cv2.imwrite("results/segmentation/" + self.filename, self.segmen_image)
@@ -118,22 +75,12 @@ class Recognizer:
         for row in range(self.rows):
             for col in range(self.cols):
                 if self.segmen_image[row, col, 0] == 255 and self.segmen_image[row, col, 1] == 255 and self.segmen_image[row, col, 2] == 255:
-                    # cv2.floodFill(self.segmen_image, None, (y, x), color[i])
-
                     color = self.get_color(i)
                     self.parts.append(Part(color))
-
                     self.flood_fill((row, col), color)
                     i += 1
         self.remove_small_parts()
         print(len(self.parts))
-
-        #     # Invert floodfilled image
-        # im_floodfill_inv = cv2.bitwise_not(image)
-        #
-        # # Combine the two images to get the foreground.
-        # im_out = image | im_floodfill_inv
-        # return seg_imag
 
     def calculate_moments(self):
         """Calculate moments for parts."""
@@ -161,6 +108,7 @@ class Recognizer:
             "max": [],
         }
 
+        # Detect part
         for part in self.parts:
             if self.is_Fed(part):
                 Fed.append(part)
@@ -174,6 +122,7 @@ class Recognizer:
                     self.recog_image[pixel[0], pixel[1], 1] = 0
                     self.recog_image[pixel[0], pixel[1], 2] = 0
 
+        # Find Fed's egdes
         for part in Fed:
             row_min = np.copy(self.rows)
             col_min = np.copy(self.cols)
@@ -190,6 +139,7 @@ class Recognizer:
             Fed_line["min"].append((row_min, col_min))
             Fed_line["max"].append((row_max, col_max))
 
+        # Find x's egdes
         for part in x:
             row_min = np.copy(self.rows)
             col_min = np.copy(self.cols)
@@ -206,29 +156,14 @@ class Recognizer:
             x_line["min"].append((row_min, col_min))
             x_line["max"].append((row_max, col_max))
 
-        for fed in Fed:
-            print(fed.color)
-        print("")
-        for e in E:
-            print(e.color)
-        print("")
-        for i in x:
-            print(i.color)
-
+        # Find word's egdes
         for i, value in enumerate(Fed_line["min"]):
-            print(len(Fed_line["min"]))
-            print(len(x_line["min"]))
-            print()
             row_min = x_line["min"][i][0] if (Fed_line["min"][i][0] > x_line["min"][i][0]) else Fed_line["min"][i][0]
             row_max = Fed_line["max"][i][0] if (Fed_line["max"][i][0] > x_line["max"][i][0]) else x_line["max"][i][0]
             col_min = Fed_line["min"][i][1]
             col_max = x_line["max"][i][1]
             start_line = (col_min, row_min)
             end_line = (col_max, row_max)
-
-            print(start_line)
-            print(end_line)
-
             cv2.rectangle(self.image, start_line, end_line, (0, 100, 0), 1)
 
     def flood_fill(self, position, part_color):
@@ -245,9 +180,6 @@ class Recognizer:
             self.segmen_image[current[0], current[1], 2] = part_color[2]
 
             self.parts[-1].word_index.append(current)
-
-            # current[1] -> x , current[0] -> y in coordinate system
-            # in image: row -> y, col -> x
 
             left = (current[0], current[1]-1)
             right = (current[0], current[1]+1)
@@ -288,7 +220,7 @@ class Recognizer:
                     vector[index] = 0
             return vector
 
-        img = np.copy(self.image)
+        self.fuzzy_image = np.copy(self.image)
 
         for row in range(1, self.rows-1):
             for col in range(1, self.cols-1):
@@ -298,8 +230,7 @@ class Recognizer:
                         tmp[0] += self.image[row+k, col+l, 0] * filtr[1+k][1+l]
                         tmp[1] += self.image[row+k, col+l, 1] * filtr[1+k][1+l]
                         tmp[2] += self.image[row+k, col+l, 2] * filtr[1+k][1+l]
-                img[row, col] = cut(tmp)
-        return img
+                self.fuzzy_image[row, col] = cut(tmp)
 
     def detect_blue(self, pixel):
         """Detect blue color."""
@@ -352,7 +283,6 @@ class Recognizer:
             g = random.randint(0, 255)
             r = random.randint(0, 255)
             color.append([b, g, r])
-
         return color[i]
 
     def is_Fed(self, part):

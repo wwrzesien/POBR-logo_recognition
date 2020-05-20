@@ -1,6 +1,6 @@
 
 class Part:
-    """Moments handler."""
+    """Parts handler."""
 
     def __init__(self, color):
         self.color = color
@@ -45,6 +45,7 @@ class Part:
         return moment
 
     def count_moments(self):
+        """Calculate moments."""
         self.m00 = self.geom_moment(0, 0)
         self.m01 = self.geom_moment(0, 1)
         self.m10 = self.geom_moment(1, 0)
