@@ -1,4 +1,4 @@
-# imageRecognition
+# image-recognition
 
 Application which detects FedEx logo in images.
 
